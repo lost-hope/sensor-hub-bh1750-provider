@@ -37,12 +37,14 @@ class BH1750SensorUsermod : public Usermod {
     uint16_t checkIntervalS = 10; // how often to read the sensor
     String namePrefix = "bh1750"; // sensor name becomes "<prefix>_illuminance"
     uint8_t precision = 0;        // decimal places published
+    uint8_t priority = 100;       // getValue() selection priority - lower wins among sensors of the same SensorType (see sensor_bus.h)
 
     static const char _name[];
     static const char _enabled[];
     static const char _checkInterval[];
     static const char _namePrefix[];
     static const char _precision[];
+    static const char _priority[];
 
     bool beginSensor() {
       return lightMeter.begin(BH1750::CONTINUOUS_HIGH_RES_MODE, 0x23, &Wire) ||
@@ -51,7 +53,7 @@ class BH1750SensorUsermod : public Usermod {
 
     void registerSensors() {
       if (!hub || luxHandle != SENSOR_HANDLE_INVALID) return; // already registered
-      luxHandle = hub->registerSensor((namePrefix + "_illuminance").c_str(), SensorType::Illuminance, nullptr, nullptr, precision);
+      luxHandle = hub->registerSensor((namePrefix + "_illuminance").c_str(), SensorType::Illuminance, nullptr, nullptr, precision, priority);
     }
 
   public:
@@ -105,6 +107,7 @@ class BH1750SensorUsermod : public Usermod {
       top[FPSTR(_checkInterval)] = checkIntervalS;
       top[FPSTR(_namePrefix)] = namePrefix;
       top[FPSTR(_precision)] = precision;
+      top[FPSTR(_priority)] = priority;
     }
 
     bool readFromConfig(JsonObject& root) override {
@@ -114,6 +117,7 @@ class BH1750SensorUsermod : public Usermod {
       configComplete &= getJsonValue(top[FPSTR(_checkInterval)], checkIntervalS);
       configComplete &= getJsonValue(top[FPSTR(_namePrefix)], namePrefix);
       configComplete &= getJsonValue(top[FPSTR(_precision)], precision);
+      configComplete &= getJsonValue(top[FPSTR(_priority)], priority);
       return configComplete;
     }
 
@@ -121,6 +125,7 @@ class BH1750SensorUsermod : public Usermod {
       settingsScript.print(F("addInfo('BH1750Sensor:checkInterval',1,'seconds between sensor reads');"));
       settingsScript.print(F("addInfo('BH1750Sensor:namePrefix',1,'sensor name becomes &lt;prefix&gt;_illuminance - must be unique across all sensor providers');"));
       settingsScript.print(F("addInfo('BH1750Sensor:precision',1,'decimal places published');"));
+      settingsScript.print(F("addInfo('BH1750Sensor:priority',1,'getValue() selection priority - lower wins if another provider also registers an Illuminance sensor');"));
     }
 };
 
@@ -129,6 +134,7 @@ const char BH1750SensorUsermod::_enabled[]       PROGMEM = "enabled";
 const char BH1750SensorUsermod::_checkInterval[] PROGMEM = "checkInterval";
 const char BH1750SensorUsermod::_namePrefix[]    PROGMEM = "namePrefix";
 const char BH1750SensorUsermod::_precision[]     PROGMEM = "precision";
+const char BH1750SensorUsermod::_priority[]      PROGMEM = "priority";
 
 static BH1750SensorUsermod bh1750_sensor;
 REGISTER_USERMOD(bh1750_sensor);
